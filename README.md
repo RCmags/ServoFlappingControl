@@ -6,7 +6,9 @@ The program is designed to receive 3 PWM inputs from an RC receiver (operating i
 NOTE: MODE 1 can also be used with this program. It is only a matter of swapping the RX connections to the arduino.
 
 The program was written for an Arduino Nano but it should be compatible with other boards. It also requires the "PinChageInterrupt" library found here:
-  https://www.arduino.cc/reference/en/libraries/pinchangeinterrupt/
+
+https://www.arduino.cc/reference/en/libraries/pinchangeinterrupt/
 
 For more information on the controller, please see this post:
-  https://www.rcgroups.com/forums/showpost.php?p=41325203&postcount=69
+
+https://www.rcgroups.com/forums/showpost.php?p=41325203&postcount=69
