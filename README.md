@@ -7,7 +7,7 @@ Lastly, the controller is equipped with a low-voltage cutoff routine. This will 
 
 NOTE: MODE 1 can also be used with this program. It is only a matter of swapping the RX connections to the arduino.
 
-The program was written for an Arduino Nano but it should be compatible with other boards. It also requires the "PinChageInterrupt" library found here:
+The program was written for an Arduino Nano but it should be compatible with other boards. It requires the "PinChageInterrupt" library found here:
 
 https://www.arduino.cc/reference/en/libraries/pinchangeinterrupt/
 
