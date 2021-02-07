@@ -1,5 +1,3 @@
-// NOTE: Version 2
-
 // Description: Servo controller for a servo-powered ornithopter.
 
 // Program decodes PWM signals from an RC reciever and outputs PWM signals that can be read by hobby grade servos. 
