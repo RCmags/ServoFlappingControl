@@ -14,3 +14,6 @@ https://www.arduino.cc/reference/en/libraries/pinchangeinterrupt/
 For more information on the controller, please see this post:
 
 https://www.rcgroups.com/forums/showpost.php?p=41325203&postcount=69
+
+
+![picture](ReceiverServoFlap_VoltCutoff.png)
