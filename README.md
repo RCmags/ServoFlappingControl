@@ -5,7 +5,8 @@ The program is designed to receive 3 PWM inputs from an RC receiver (operating i
 
 Lastly, the controller is equipped with a low-voltage cutoff routine. This will dissable the throttle channel to prevent over-discharging a battery. The routine uses an analog-pin to read the input voltage via a voltage-divider. See the attached schematic for an example of the required circuit.
 
-NOTE: MODE 1 can also be used with this program. It is only a matter of swapping the RX connections to the arduino.
+![picture](ReceiverServoFlap_VoltCutoff.png)
+
 
 The program was written for an Arduino Nano but it should be compatible with other boards. It requires the "PinChageInterrupt" library found here:
 
@@ -15,5 +16,5 @@ For more information on the controller, please see this post:
 
 https://www.rcgroups.com/forums/showpost.php?p=41325203&postcount=69
 
+NOTE: MODE 1 can also be used with this program. It is only a matter of swapping the RX connections to the arduino.
 
-![picture](ReceiverServoFlap_VoltCutoff.png)
