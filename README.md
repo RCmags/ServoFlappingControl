@@ -7,9 +7,7 @@ Lastly, the controller is equipped with a low-voltage cutoff routine. This will 
 
 ![picture](ReceiverServoFlap_VoltCutoff.png)
 
-The program was written for an Arduino Nano but it should be compatible with other boards. It requires the "PinChageInterrupt" library found [here.](https://www.arduino.cc/reference/en/libraries/pinchangeinterrupt/)
-
-For more information on the controller, please see this [post.](https://www.rcgroups.com/forums/showpost.php?p=41325203&postcount=69)
+The program was written for an Arduino Nano but it should be compatible with other boards. It requires the "PinChageInterrupt" library found [here.](https://www.arduino.cc/reference/en/libraries/pinchangeinterrupt/) For more information on the controller, please see this [RCgroups post.](https://www.rcgroups.com/forums/showpost.php?p=41325203&postcount=69)
 
 
 
