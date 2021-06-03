@@ -19,7 +19,9 @@ See the attached schematic for an example of the required circuit:
 
 Finally, here is an example of the kind of aircraft this code was writen for:
 
-<img src = "/example_pics/servo_body_res.jpg" width = "30%" height = "30%"> <img src = "/example_pics/bottom_view_res.JPG" width = "30%" height = "30%"> <img src = "/example_pics/side_view_res.JPG" width = "30%" height = "30%"> <img src = "/example_pics/flap_motion.gif" width = "30%" height = "30%" style = "test-align: center;">
+<img src = "/example_pics/servo_body_res.jpg" width = "30%" height = "30%"> <img src = "/example_pics/bottom_view_res.JPG" width = "30%" height = "30%"> <img src = "/example_pics/side_view_res.JPG" width = "30%" height = "30%"> 
+
+<img src = "/example_pics/flap_motion.gif" width = "30%" height = "30%"> <img src = "/example_pics/control_motion.gif" width = "30%" height = "30%">
 
 
 
