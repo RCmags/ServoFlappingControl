@@ -11,9 +11,9 @@ For more information on the controller, please see this [RCgroups post](https://
 
 See the attached schematic for an example of the required circuit:
 
-<img src = "ReceiverServoFlap_VoltCutoff.png" width = "90%" height = "90%">
+<img src = "ReceiverServoFlap_VoltCutoff.png" width = "80%">
 
-This video shows what the controller and how it works: 
+This video shows what the controller and how it works:  
 [<img src="https://img.youtube.com/vi/T6NfZD_iuEs/maxresdefault.jpg" width="50%">](https://youtu.be/T6NfZD_iuEs)
 
 Lastly, here is an example of the kind of aircraft this code was writen for:
