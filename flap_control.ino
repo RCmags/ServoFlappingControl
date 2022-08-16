@@ -1,285 +1,185 @@
-// Description: Servo controller for a servo-powered ornithopter.
-
-// Program decodes PWM signals from an RC reciever and outputs PWM signals that can be read by hobby grade servos. 
-// The throttle channel is used generate a flapping motion of fixed frequency and variable amplitude, while the 
-// elevator and aileron channels are used to offset the dihedral angle of the wings.
-
-//--- Libraries:
 #include <Servo.h>
-#include <PinChangeInterrupt.h>
 
-//--- Constants:  
+//---- Input parameters
+
+#define FREQ          3.0          // wingbeat frequency, hz
+#define GAIN_WAVE     10.0         // triangle wave trucation gain
+
+#define GAIN_PITCH    1.0
+#define GAIN_ROLL     1.0          
+#define GAIN_THRT     0.8          // variable amplitude
+#define GAIN_YAW      0.4          // differential amplitude
+
+#define GAIN_PITCH_DH 0.0          // differential dihedral, pitch
+#define GAIN_ROLL_DH  0.0          // differential dihedral, roll
+
+#define GAIN_PITCH_FM 0.0          // frequency modulation, pitch
+#define GAIN_ROLL_FM  0.0          // frequency modulation, roll
+
+#define TRIM_LEFT     0            // left wing 
+#define TRIM_RIGHT    -60          // right wing
+#define TRIM_TLEFT    0            // left tail
+#define TRIM_TRIGHT   50           // right tail
+      
+#define RESISTOR_1    67000        // ground -> middle
+#define RESISTOR_2    118000       // middle -> voltage
+#define VOLT_CUT      6.0          // cutoff voltage
+#define VOLT_MAX      8.4          // fully charged voltage
+
+#define PWM_MID       1500
+#define PWM_MIN       1100
+#define PWM_MAX       1900
+
+//---- global variables 
+
+Servo    servo[4]; 
+volatile uint16_t pwm_input[4] = {0};
+
+//----- Input signals
+
+// PORTB = {8 .. 13} -> using pins {9 .. 12} = B00011110
+
+ISR( PCINT0_vect ) {
+  // store state
+  static uint32_t initial_time[4] = { micros() };  
+  static uint8_t  port_last = B00000000;
   
-  //- PWM input:    
-      //Input Gains:
-const float GAIN_ROLL       = -0.2;
-const float GAIN_PITCH      = 0.2;
-const float GAIN_AMP        = 0.5;
-const float GAIN_AMP_DIFF   = 1.0; 
-const float GAIN[]          = { GAIN_ROLL, GAIN_PITCH, 1.0, GAIN_AMP_DIFF };
-      // Pins:
-const int RC_INPUT_PINS[]   = { 9, 10, 11, 12 };
-const int N_RC_INPUTS       = sizeof( RC_INPUT_PINS )/sizeof( RC_INPUT_PINS[0] );
-      // Filtering:
-const int RC_INPUT_DEADBAND = 4;
-const int PWM_TIME_LIMIT    = 2500;
-const float DECAY_INPUT     = 0.05;
-
-  //- PWM output:
-      // Restrictions:
-const int PWM_CHANGE        = 1000;
-const int PWM_MID           = 1500;
-      // Pins:
-const int PIN_LEFT          = 2;
-const int PIN_RIGHT         = 3;
-      // Trims:
-const int TRIM_LEFT         = 0;
-const int TRIM_RIGHT        = 0;
-
-  //- Amplitude control: 
-const int AMP_OFFSET        = 400;
-const float REACTION_TIME   = 0.01;
-const float REACTION_PARAMETER = (500.0/3.0) / REACTION_TIME ;
-
-  //- Wave signals
-const float FREQ            = 3.2;
-const float SINE_CONST      = 2.0*PI/1000.0;
-const float TRI_CONST       = 4.0/1000.0;
-
-  //- Low voltage cutoff:
-      // Gains:
-const float VOLT_CUTOFF     = 2 * 3.4; // Voltage drops during load
-const float DECAY_VOLT      = 0.001;
-const float INTERVAL        = 5000.0;
-      // Input pin:
-const int VOLT_PIN          = A7;
-const float RESISTOR_1      = 67000;
-const float RESISTOR_2      = 118000;
-const float VOLT_CONVERSION = ( 5.0/1024.0 )*( RESISTOR_1 + RESISTOR_2 )/RESISTOR_1; 
-
-  //- Startup delay:
-const int BLINK_NUM         = 5;
-const int BLINK_TIME        = 200;
-
-//--- Variables:
-Servo servo[2];
-float pwm_input[N_RC_INPUTS] = {0};
-volatile int16_t pwm_raw[N_RC_INPUTS] = {0};
-volatile int32_t curr_time[N_RC_INPUTS] = {0};
-volatile boolean last_state[N_RC_INPUTS] = {HIGH}; // Pins default to HIGH (pullup resistor)
-
-
-//--- Functions:
-
-// -- PWN Inputs --
-
-  //- Pin Change Interrupt to get PWM inputs: 
-void checkPwmInput( void ) {
+  // scan pins
+  uint8_t port_falling = ~PINB & port_last;
+  uint32_t current_time = micros(); 
   
-  for( int index = 0 ; index < N_RC_INPUTS ; index += 1 ) {
-    
-    if( digitalRead( RC_INPUT_PINS[index] ) == HIGH && last_state[index] == LOW ) {
-      last_state[index] = HIGH;
-      curr_time[index] = micros(); 
-    }
-
-    if( digitalRead( RC_INPUT_PINS[index] ) == LOW && last_state[index] == HIGH ) {
-
-      if( curr_time[index] == 0 ) {
-        curr_time[index] = micros() - PWM_MID;
-      }
-      
-      last_state[index] = LOW;
-      
-      int change_time = micros() - curr_time[index] - PWM_MID;
-      
-      int diff = pwm_raw[index] - change_time;
-
-      // Deadband filter:
-
-      if( diff > RC_INPUT_DEADBAND ) {
-        pwm_raw[index] = change_time - RC_INPUT_DEADBAND;
-      } 
-      
-      if( diff < -RC_INPUT_DEADBAND) { 
-        pwm_raw[index] = change_time + RC_INPUT_DEADBAND;
-      }    
+  for( uint8_t index = 0; index < 4; index += 1) {
+    uint8_t mask = B00000010 << index;
+    if( PINB & mask ) {                 // rising pin
+      initial_time[index] = current_time;
+    } else if( port_falling & mask ) {  // falling pin
+      pwm_input[index] = current_time - initial_time[index];
     }    
-  }
-}
-
-  //- Function to reset PWM inputs if signals take too long [ Wires are not connected ]: 
-void checkInputState( void ) {
-  
-  for( int index = 0 ; index < N_RC_INPUTS ; index += 1 ) {
-    
-    if( curr_time[index] != 0 && digitalRead( RC_INPUT_PINS[index] ) == HIGH && (micros() - curr_time[index]) > PWM_TIME_LIMIT ) {
-      
-      curr_time[index] = 0;
-      last_state[index] = LOW;
-      
-      if( index == 2 ) {
-        pwm_raw[2] = -AMP_OFFSET;
-      } else {
-        pwm_raw[index] = 0;    
-      }
-      
-      pwm_input[index] = pwm_raw[index];
-    }
-  }
-}
-
-  //- Smoothing and scaling pwm inputs: 
-void input_filter( void ) {
-  for( int index = 0; index < N_RC_INPUTS; index += 1 ) {
-    pwm_input[index] = ( pwm_raw[index]*GAIN[index] )*DECAY_INPUT + pwm_input[index]*( 1 - DECAY_INPUT );
-  }
-}
-
-// -- Wave functions [for wing oscillation] --
-
-  //- Returns sine wave with smooth transitions between frequencies:
-float sin_wave( float freq ) {
-
-  static float accum_time = 0;
-  static int16_t change_time = 0;
-
-  change_time = millis() - change_time;
-  accum_time += change_time*freq;
-  change_time = millis();
-  
-  return sin( SINE_CONST * accum_time );
-}
-
-  //- Returns triangular wave with smooth transitions between frequencies: 
-float tri_wave( float freq ) {
-  
-  static int32_t diff_time = millis();
-  static float accum = 0;
-  static boolean dirr = 1;
-  
-  int32_t curr_time = millis();
-  diff_time = curr_time - diff_time;
-  
-  if( dirr == true ) {
-    accum += diff_time * freq*TRI_CONST;
-  } else {
-    accum -= diff_time * freq*TRI_CONST;
-  }
-
-  if( accum > 1 ) {
-    dirr = false;
-    accum = 1;
-  } else if ( accum < -1 ) {
-    dirr = true; 
-    accum = -1;
-  }
-
-  diff_time = curr_time;
-  return accum;
-}
-
-// -- Servo oscillation functions --
-
-  //- Limits output to positive values:
-int positive( int input ) {
-  if( input < 0 ) {
-    return 0;
-  } else {
-    return input;
-  }
-}
-
-  //- Frequency is varied once servo cannot rotate faster: 
-float frequency( float amp ) {
-  if( (amp*FREQ) < REACTION_PARAMETER ) {
-    return FREQ;
-  } else {
-    return REACTION_PARAMETER / amp;
-  }
-}
-
-  //- Combines wing oscillation and dihedral angle: 
-int flap_func( int amplitude, int amp_diff, int offset ) {
-  if( amplitude == 0 ) {
-    return constrain( offset , -PWM_CHANGE, PWM_CHANGE );
-  } else {
-    return constrain( offset + tri_wave( frequency(amplitude) )*positive(amplitude + amp_diff) , -PWM_CHANGE, PWM_CHANGE );
-  }
-}
-
-// -- Low voltage cutoff [Soft decrease in value] --
-float check_voltage( void ) {
-
-  static float av_volt = 1024 * VOLT_CONVERSION;
-  static int32_t past_time = 0;
-
-  if( av_volt > VOLT_CUTOFF ) {    
-  
-    av_volt = ( analogRead( VOLT_PIN )*VOLT_CONVERSION )*DECAY_VOLT + av_volt*(1 - DECAY_VOLT);
-    return 1;
-  
-  } else {
-    
-    if( past_time == 0 ) {
-      past_time = millis();
-    }
-    
-    int local_time = millis() - past_time;
-    
-    if( local_time < INTERVAL ) {
-      return 1 - float(local_time)/INTERVAL;       
-    } else {
-      return 0;
-    }
   } 
+  port_last = PINB; // store last state
 }
 
-//--- Main functions:
+void setupISR() {
+  PCICR = B00000001;    // enable PORTB interrupts
+  PCMSK0 = B00011110;   // enable ISR for pins 9-12
+  for ( uint8_t pin  = 9; pin <= 12; pin++ ) { 
+    pinMode(pin, INPUT_PULLUP);
+  }  
+}
+
+//----- Input filter
+
+void scaleInputs(float* output) {
+  output[0] = float( int16_t( pwm_input[0] ) - PWM_MID );            // roll
+  output[1] = float( int16_t( pwm_input[1] ) - PWM_MID );            // pitch
+  output[2] = float( int16_t( pwm_input[2] ) - PWM_MIN )*GAIN_THRT;  // throttle
+  output[3] = float( int16_t( pwm_input[3] ) - PWM_MID )*GAIN_YAW;   // yaw
+}
+
+float positive(float input) {
+  return input < 0 ? 0 : input;           // lift is linear with amplitude in forward flight
+}
+
+//----- Servos
+
+void setupServos() {
+    pinMode(2, OUTPUT);
+    pinMode(3, OUTPUT);
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+    servo[0].attach(2);      // left  tail
+    servo[1].attach(3);      // right tail
+    servo[2].attach(4);      // left  wing
+    servo[3].attach(5);      // right wing
+}
+
+//---- Waveform
+
+float floorTime() {
+  float t = micros() * 1e-6 * FREQ;
+  return t - floor(t); 
+}
+
+float halfWave(float x, float dm) {
+  float m = 4 + dm;
+  float im = 1.0/m;
+  float x1 = 0.25 - im;
+  float x2 = 0.25 + im;
+  return x < x1 ? 1.0           :
+         x < x2 ? -m*(x - 0.25) :
+                 -1.0           ;  
+}
+
+float fullWave(float x, float dm) {
+  return x < 0.5 ? halfWave(x, dm) : -halfWave(x - 0.5, dm);
+}
+
+float freqMod(float t, float xi) {
+  constexpr float CONST = 1.0/float(PWM_MAX - PWM_MIN);  
+  xi = xi * CONST;
+  float m = 1.0/(1 + xi);        
+  float im = 0.5/m;
+  return t < im ? m*t : (0.5*t - 0.5)/(1 - im) + 1 ;
+}
+
+float fwave(float amp, float ds=0) {
+  constexpr float CONST = GAIN_WAVE/(PWM_MAX - PWM_MIN); 
+  float dm = positive(amp) * CONST;
+  float t  = floorTime();
+  float tm = freqMod(t, ds);
+  return fullWave(tm, dm);
+}
+
+//----- Control mixes
+
+void vmix(float* output, float* input, const float gain_x=1, const float gain_y=1) {
+  float input_0 = input[0]*gain_x;
+  float input_1 = input[1]*gain_y;
+  float mix1 = input_1 - input_0;
+  float mix2 = input_1 + input_0;
+  // return output
+  output[0] = mix1;
+  output[1] = mix2;
+} 
+
+//----- Cutoff
+
+bool voltageCutoff() {
+  constexpr float CONST = (5.0/1024.0)*(RESISTOR_1 + RESISTOR_2)/RESISTOR_1;
+  static float mean = VOLT_MAX; 
+  float volt = analogRead(A7) * CONST;
+  mean += (volt - mean)*1e-4;              // average filter n=1e4
+  return mean < VOLT_CUT ? HIGH : LOW;     // cutoff voltage
+}
+
+//----- Main code
+
 void setup() {
-  
-  // Setting pin change interrupts:
-  for( int index = 0; index < N_RC_INPUTS ; index += 1 ) {
-    pinMode( RC_INPUT_PINS[index] , INPUT_PULLUP );
-    attachPinChangeInterrupt( digitalPinToPCINT( RC_INPUT_PINS[index] ), checkPwmInput , CHANGE );
-  }
-
-  // Setting servo outputs:
-  pinMode( PIN_LEFT, OUTPUT );
-  servo[0].attach( PIN_LEFT );
-  servo[0].writeMicroseconds( PWM_MID + TRIM_LEFT );
-  
-  pinMode( PIN_RIGHT, OUTPUT );
-  servo[1].attach( PIN_RIGHT );
-  servo[1].writeMicroseconds( PWM_MID + TRIM_RIGHT );
-  
-  //-
-
-  pwm_raw[2] = -AMP_OFFSET;
-  pwm_input[2] = pwm_raw[2]; 
-
-  //-
-
-  pinMode( VOLT_PIN , INPUT_PULLUP );
-
-  // Startup delay:
-  for( int index = 0; index < BLINK_NUM; index += 1 ) {
-    digitalWrite( LED_BUILTIN, HIGH );
-    delay(BLINK_TIME);
-    digitalWrite( LED_BUILTIN, LOW );
-    delay(BLINK_TIME);
-  } 
+  setupISR();
+  setupServos();
+  pinMode(A7, INPUT);
 }
 
 void loop() {
-
-  checkInputState();
-  input_filter();
-
-  float cutoff = check_voltage();
-  int amp = positive( pwm_input[2] + AMP_OFFSET ) * cutoff;
-  int diff = pwm_input[3] * cutoff;
+  float input[4]; scaleInputs(input);
+  float mix1[2]; vmix(mix1, input, GAIN_ROLL   , GAIN_PITCH);      // v-tail
+  float mix2[2]; vmix(mix2, input, GAIN_ROLL_DH, GAIN_PITCH_DH);   // differential dihedral
+  float mix3[2]; vmix(mix3, input,-GAIN_ROLL_FM, GAIN_PITCH_FM);   // frequency modulation
   
-  servo[0].writeMicroseconds( PWM_MID + TRIM_LEFT - flap_func( amp , diff , pwm_input[0] + pwm_input[1] ) );
-  servo[1].writeMicroseconds( PWM_MID + TRIM_RIGHT + flap_func( amp , -diff , -pwm_input[0] + pwm_input[1] ) );
+  bool cutoff = voltageCutoff();
+  float amp1 = cutoff ? 0 : positive( input[2] + input[3] );
+  float amp2 = cutoff ? 0 : positive( input[2] - input[3] );
+  
+  float wave1 = fwave( input[2], mix3[0] ); 
+  float wave2 = fwave( input[2], mix3[1] ); 
+    
+  wave1 = wave1*amp1 + mix2[0];          // differential amplitude
+  wave2 = wave2*amp2 + mix2[1];
+  
+  servo[0].writeMicroseconds( PWM_MID + mix1[0] + TRIM_TLEFT  );    // left  tail
+  servo[1].writeMicroseconds( PWM_MID - mix1[1] + TRIM_TRIGHT );    // right tail
+  servo[2].writeMicroseconds( PWM_MID + wave1   + TRIM_LEFT   );    // left  wing
+  servo[3].writeMicroseconds( PWM_MID - wave2   + TRIM_RIGHT  );    // right wing
 }
+
+// Note: need to combine assymetries for robust control
