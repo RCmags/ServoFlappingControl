@@ -13,4 +13,4 @@ Lastly, rudder channel (4) is used to assymetrically vary the amplitude of the w
 
 <img src = "img/schematic.png" width = "80%">
 
-See this video to watch the controller in operator: [servo controller](https://youtu.be/T6NfZD_iuEs)  
+See this video to watch the controller in operation: [servo controller](https://youtu.be/T6NfZD_iuEs)  

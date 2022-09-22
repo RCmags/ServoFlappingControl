@@ -1,62 +1,55 @@
+/* ORNITHOPTER SERVO CONTROLLER */
+
+/* Sketch for an arduino NANO that operates the servos of a radio controlled ornithopter. 
+ * It commands two servos to flap the wings and two servos to control a V-tail.
+ * Author: RCmags https://github.com/RCmags
+*/
+
+//=============== Connections ================
+// See included schematic
+  // Inputs:
+// Pin 9  -> Receiver CH1
+// Pin 10 -> Receiver CH2
+// Pin 11 -> Receiver CH3
+// Pin 12 -> Receiver CH4
+// Pin A7 -> Middle of voltage divider
+  // Outputs:
+// Pin 2  -> Left  wing servo
+// Pin 3  -> Right wing servo 
+// Pin 4  -> Left  tail servo 
+// Pin 5  -> Right tail servo 
+
+//=================== Code ===================
 #include <Servo.h>
-
-//---- Input parameters
-
-#define FREQ          3.0          // wingbeat frequency, hz
-#define GAIN_WAVE     10.0         // triangle wave trucation gain
-
-#define GAIN_PITCH    1.0
-#define GAIN_ROLL     1.0          
-#define GAIN_THRT     0.8          // variable amplitude
-#define GAIN_YAW      0.4          // differential amplitude
-
-#define GAIN_PITCH_DH 0.0          // differential dihedral, pitch
-#define GAIN_ROLL_DH  0.0          // differential dihedral, roll
-
-#define GAIN_PITCH_FM 0.0          // frequency modulation, pitch
-#define GAIN_ROLL_FM  0.0          // frequency modulation, roll
-
-#define TRIM_LEFT     0            // left wing 
-#define TRIM_RIGHT    -60          // right wing
-#define TRIM_TLEFT    0            // left tail
-#define TRIM_TRIGHT   50           // right tail
-      
-#define RESISTOR_1    67000        // ground -> middle
-#define RESISTOR_2    118000       // middle -> voltage
-#define VOLT_CUT      6.0          // cutoff voltage
-#define VOLT_MAX      8.4          // fully charged voltage
-
-#define PWM_MID       1500
-#define PWM_MIN       1100
-#define PWM_MAX       1900
+#include "parameters.cpp"
 
 //---- global variables 
-
-Servo    servo[4]; 
+Servo servo[4]; 
 volatile uint16_t pwm_input[4] = {0};
 
 //----- Input signals
-
 // PORTB = {8 .. 13} -> using pins {9 .. 12} = B00011110
 
+/* port change interrupt to read PWM inputs from receiver */
 ISR( PCINT0_vect ) {
-  // store state
-  static uint32_t initial_time[4] = { micros() };  
-  static uint8_t  port_last = B00000000;
+  static uint32_t initial_time[4] = {0}; 
+  static uint8_t port_last = PINB;  
   
-  // scan pins
-  uint8_t port_falling = ~PINB & port_last;
+  // port changes
   uint32_t current_time = micros(); 
+  uint8_t port_rise = ~port_last & PINB;
+  uint8_t port_fall = port_last & ~PINB;
   
+  // find changing pins
   for( uint8_t index = 0; index < 4; index += 1) {
     uint8_t mask = B00000010 << index;
-    if( PINB & mask ) {                 // rising pin
-      initial_time[index] = current_time;
-    } else if( port_falling & mask ) {  // falling pin
-      pwm_input[index] = current_time - initial_time[index];
-    }    
-  } 
-  port_last = PINB; // store last state
+    if( port_rise & mask ) {                
+        initial_time[index] = current_time;
+    } else if ( port_fall & mask ) {       
+        pwm_input[index] = current_time - initial_time[index];
+    }
+  }
+  port_last = PINB;    
 }
 
 void setupISR() {
@@ -69,6 +62,7 @@ void setupISR() {
 
 //----- Input filter
 
+/* convert PWM inputs to floats and center the readings */
 void scaleInputs(float* output) {
   output[0] = float( int16_t( pwm_input[0] ) - PWM_MID );            // roll
   output[1] = float( int16_t( pwm_input[1] ) - PWM_MID );            // pitch
@@ -77,7 +71,7 @@ void scaleInputs(float* output) {
 }
 
 float positive(float input) {
-  return input < 0 ? 0 : input;           // lift is linear with amplitude in forward flight
+  return input < 0 ? 0 : input;  
 }
 
 //----- Servos
@@ -87,41 +81,45 @@ void setupServos() {
     pinMode(3, OUTPUT);
     pinMode(4, OUTPUT);
     pinMode(5, OUTPUT);
-    servo[0].attach(2);      // left  tail
-    servo[1].attach(3);      // right tail
-    servo[2].attach(4);      // left  wing
-    servo[3].attach(5);      // right wing
+    servo[0].attach(2);
+    servo[1].attach(3);
+    servo[2].attach(4);
+    servo[3].attach(5);
 }
 
 //---- Waveform
 
+/* time variable between 0 and 1 */
 float floorTime() {
   float t = micros() * 1e-6 * FREQ;
   return t - floor(t); 
 }
 
+/* trucanted triangle wave for times between 0 and 0.5 */
 float halfWave(float x, float dm) {
   float m = 4 + dm;
   float im = 1.0/m;
   float x1 = 0.25 - im;
   float x2 = 0.25 + im;
   return x < x1 ? 1.0           :
-         x < x2 ? -m*(x - 0.25) :
-                 -1.0           ;  
+         x < x2 ? -m*(x - 0.25) : -1.0;  
 }
 
+/* complete wave for times between 0 and 1 */
 float fullWave(float x, float dm) {
   return x < 0.5 ? halfWave(x, dm) : -halfWave(x - 0.5, dm);
 }
 
-float freqMod(float t, float xi) {
+/* increase and decrease the slope of time */
+float freqMod(float t, float ds) {
   constexpr float CONST = 1.0/float(PWM_MAX - PWM_MIN);  
-  xi = xi * CONST;
-  float m = 1.0/(1 + xi);        
+  ds = ds * CONST;
+  float m = 1.0/(1 + ds);        
   float im = 0.5/m;
-  return t < im ? m*t : (0.5*t - 0.5)/(1 - im) + 1 ;
+  return t < im ? m*t : (0.5*t - 0.5)/(1 - im) + 1;
 }
 
+/* truncated triangle wave with variable ramp-up and ramp-down */
 float fwave(float amp, float ds=0) {
   constexpr float CONST = GAIN_WAVE/(PWM_MAX - PWM_MIN); 
   float dm = positive(amp) * CONST;
@@ -132,6 +130,7 @@ float fwave(float amp, float ds=0) {
 
 //----- Control mixes
 
+/* v-tail mixing with adjustable pitch and roll gain */
 void vmix(float* output, float* input, const float gain_x=1, const float gain_y=1) {
   float input_0 = input[0]*gain_x;
   float input_1 = input[1]*gain_y;
@@ -144,15 +143,24 @@ void vmix(float* output, float* input, const float gain_x=1, const float gain_y=
 
 //----- Cutoff
 
+/* low voltage cutoff based on voltage divider */
 bool voltageCutoff() {
-  constexpr float CONST = (5.0/1024.0)*(RESISTOR_1 + RESISTOR_2)/RESISTOR_1;
+  constexpr float CONST = (5.0/1024.0)*(RESISTOR_1 + RESISTOR_2)/float(RESISTOR_1);
   static float mean = VOLT_MAX; 
   float volt = analogRead(A7) * CONST;
   mean += (volt - mean)*1e-4;              // average filter n=1e4
   return mean < VOLT_CUT ? HIGH : LOW;     // cutoff voltage
 }
 
-//----- Main code
+//----- Pitching moment correction
+
+/* elevator trim that increases with throttle. Counters pitch-down moment caused by wing flapping */
+float pitchTrim(float x) {
+  constexpr float M = PITCH_TRIM_Y / float(PITCH_TRIM_X);
+  return x < PITCH_TRIM_X ? M*x : PITCH_TRIM_Y;     
+}
+
+//----- Main loop
 
 void setup() {
   setupISR();
@@ -166,7 +174,7 @@ void loop() {
   float mix2[2]; vmix(mix2, input, GAIN_ROLL_DH, GAIN_PITCH_DH);   // differential dihedral
   float mix3[2]; vmix(mix3, input,-GAIN_ROLL_FM, GAIN_PITCH_FM);   // frequency modulation
   
-  bool cutoff = voltageCutoff();
+  bool cutoff = voltageCutoff();         // dissable oscillation with low voltage 
   float amp1 = cutoff ? 0 : positive( input[2] + input[3] );
   float amp2 = cutoff ? 0 : positive( input[2] - input[3] );
   
@@ -175,11 +183,13 @@ void loop() {
     
   wave1 = wave1*amp1 + mix2[0];          // differential amplitude
   wave2 = wave2*amp2 + mix2[1];
+
+  float ptrim = pitchTrim( input[2] );   // pitching moment correction
+  mix1[0] += ptrim;
+  mix1[1] += ptrim;
   
-  servo[0].writeMicroseconds( PWM_MID + mix1[0] + TRIM_TLEFT  );    // left  tail
+  servo[0].writeMicroseconds( PWM_MID + mix1[0] + TRIM_TLEFT  );    // left tail
   servo[1].writeMicroseconds( PWM_MID - mix1[1] + TRIM_TRIGHT );    // right tail
-  servo[2].writeMicroseconds( PWM_MID + wave1   + TRIM_LEFT   );    // left  wing
+  servo[2].writeMicroseconds( PWM_MID + wave1   + TRIM_LEFT   );    // left wing
   servo[3].writeMicroseconds( PWM_MID - wave2   + TRIM_RIGHT  );    // right wing
 }
-
-// Note: need to combine assymetries for robust control
