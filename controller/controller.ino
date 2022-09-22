@@ -1,7 +1,7 @@
 /* ORNITHOPTER SERVO CONTROLLER */
 
 /* Sketch for an arduino NANO that operates the servos of a radio controlled ornithopter. 
- * It commands two servos to flap the wings and two servos to control a V-tail.
+ * It commands two servos to flap the wings and (if desired) two servos to control a V-tail.
  * Author: RCmags https://github.com/RCmags
 */
 
@@ -77,12 +77,16 @@ float positive(float input) {
 //----- Servos
 
 void setupServos() {
+    #ifdef USE_TAIL_SERVOS
     pinMode(2, OUTPUT);
     pinMode(3, OUTPUT);
-    pinMode(4, OUTPUT);
-    pinMode(5, OUTPUT);
     servo[0].attach(2);
     servo[1].attach(3);
+    #endif
+    
+    /* wing servos */
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
     servo[2].attach(4);
     servo[3].attach(5);
 }
@@ -170,11 +174,23 @@ void setup() {
 
 void loop() {
   float input[4]; scaleInputs(input);
-  float mix1[2]; vmix(mix1, input, GAIN_ROLL   , GAIN_PITCH);      // v-tail
+
+  #ifdef USE_TAIL_SERVOS
+  float mix1[2]; vmix(mix1, input, GAIN_ROLL, GAIN_PITCH);
+  
+  float ptrim = pitchTrim( input[2] );   
+  mix1[0] += ptrim;
+  mix1[1] += ptrim;
+
+  servo[0].writeMicroseconds( PWM_MID + mix1[0] + TRIM_TLEFT  );    // left tail
+  servo[1].writeMicroseconds( PWM_MID - mix1[1] + TRIM_TRIGHT );    // right tail
+  #endif
+  
+  /* wing servos */
   float mix2[2]; vmix(mix2, input, GAIN_ROLL_DH, GAIN_PITCH_DH);   // differential dihedral
   float mix3[2]; vmix(mix3, input,-GAIN_ROLL_FM, GAIN_PITCH_FM);   // frequency modulation
   
-  bool cutoff = voltageCutoff();         // dissable oscillation with low voltage 
+  bool cutoff = voltageCutoff();         // dissable flapping at low voltage 
   float amp1 = cutoff ? 0 : positive( input[2] + input[3] );
   float amp2 = cutoff ? 0 : positive( input[2] - input[3] );
   
@@ -183,13 +199,7 @@ void loop() {
     
   wave1 = wave1*amp1 + mix2[0];          // differential amplitude
   wave2 = wave2*amp2 + mix2[1];
-
-  float ptrim = pitchTrim( input[2] );   // pitching moment correction
-  mix1[0] += ptrim;
-  mix1[1] += ptrim;
   
-  servo[0].writeMicroseconds( PWM_MID + mix1[0] + TRIM_TLEFT  );    // left tail
-  servo[1].writeMicroseconds( PWM_MID - mix1[1] + TRIM_TRIGHT );    // right tail
   servo[2].writeMicroseconds( PWM_MID + wave1   + TRIM_LEFT   );    // left wing
   servo[3].writeMicroseconds( PWM_MID - wave2   + TRIM_RIGHT  );    // right wing
 }
