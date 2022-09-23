@@ -25,6 +25,7 @@ Servo servo[2];
 volatile uint16_t pwm_input[3] = {0};
 
 //----- Input signals
+// PORTB = {0 .. 5} -> using pins {2 .. 4} = B00011100
 
 /* port change interrupt to read PWM inputs from receiver */
 ISR( PCINT0_vect ) {

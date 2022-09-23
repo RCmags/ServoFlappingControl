@@ -1,7 +1,6 @@
 // 1.  Flapping waveform
 #define FREQ              2.8          // Wingbeat frequency [hz]. Use lowest frequency that achieves flight
-#define GAIN_WAVE         12.0         /* Triangle wave to square wave gain (truncation). 
-                                          A larger gain makes the waveform become more square-like with more throttle */
+#define GAIN_WAVE         12.0         // Triangle wave to square wave gain (truncation). A larger gain makes the waveform become more square-like with more throttle
                                        
 // 2. Control inputs [negate to reverse direction]
     // I. Base inputs:

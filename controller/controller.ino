@@ -53,11 +53,18 @@ ISR( PCINT0_vect ) {
 }
 
 void setupISR() {
-  PCICR = B00000001;    // enable PORTB interrupts
-  PCMSK0 = B00011110;   // enable ISR for pins 9-12
-  for ( uint8_t pin  = 9; pin <= 12; pin++ ) { 
-    pinMode(pin, INPUT_PULLUP);
-  }  
+  // enable PORTB interrupts  
+  PCICR |= (1 << PCIE0);
+  // enable PCINT for pins 9-12                                                   
+  PCMSK0 |= (1 << PCINT1);                                              
+  PCMSK0 |= (1 << PCINT2);                                              
+  PCMSK0 |= (1 << PCINT4); 
+  PCMSK0 |= (1 << PCINT5); 
+  // set pins inputs
+  pinMode(9,  INPUT_PULLUP);
+  pinMode(10, INPUT_PULLUP);
+  pinMode(11, INPUT_PULLUP);
+  pinMode(12, INPUT_PULLUP);
 }
 
 //----- Input filter
