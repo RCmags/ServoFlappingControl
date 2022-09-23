@@ -158,14 +158,15 @@ void loop() {
   float input[3]; filterInputs(input);
   float mix1[2]; vmix(mix1, input, GAIN_ROLL_DH, GAIN_PITCH_DH);   // differential dihedral
   float mix2[2]; vmix(mix2, input,-GAIN_ROLL_FM, GAIN_PITCH_FM);   // frequency modulation
-  
-  float amp1 = positive( input[2] + input[3] );
-  float amp2 = positive( input[2] - input[3] );
+
+  float input_yaw = input[0]*GAIN_YAW;    // use roll input as yaw
+  float amp1 = positive( input[2] + input_yaw );
+  float amp2 = positive( input[2] - input_yaw );
   
   float wave1 = fwave( input[2], mix2[0] ); 
   float wave2 = fwave( input[2], mix2[1] ); 
     
-  wave1 = wave1*amp1 + mix1[0];          // differential amplitude
+  wave1 = wave1*amp1 + mix1[0];           // differential amplitude
   wave2 = wave2*amp2 + mix1[1];
   
   servo[0].writeMicroseconds( PWM_MID + wave1 + TRIM_LEFT  );    // left wing
