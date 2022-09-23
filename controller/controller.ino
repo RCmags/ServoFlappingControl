@@ -58,8 +58,8 @@ void setupISR() {
   // enable PCINT for pins 9-12                                                   
   PCMSK0 |= (1 << PCINT1);                                              
   PCMSK0 |= (1 << PCINT2);                                              
+  PCMSK0 |= (1 << PCINT3); 
   PCMSK0 |= (1 << PCINT4); 
-  PCMSK0 |= (1 << PCINT5); 
   // set pins inputs
   pinMode(9,  INPUT_PULLUP);
   pinMode(10, INPUT_PULLUP);
