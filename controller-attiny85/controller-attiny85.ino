@@ -9,12 +9,12 @@
 //=============== Connections ================
 // See included schematic
   // Inputs:
-// Pin 2 -> Receiver CH1
-// Pin 3 -> Receiver CH2
-// Pin 4 -> Receiver CH3
+// Pin 0 -> Receiver CH1 
+// Pin 1 -> Receiver CH2 
+// Pin 2 -> Receiver CH3
   // Outputs:
-// Pin 0  -> Left  wing servo
-// Pin 1  -> Right wing servo 
+// Pin 3  -> Left  wing servo
+// Pin 4  -> Right wing servo 
 
 //=================== Code ===================
 #include <Servo_ATTinyCore.h>
@@ -25,7 +25,7 @@ Servo servo[2];
 volatile uint16_t pwm_input[3] = {0};
 
 //----- Input signals
-// PORTB = {0 .. 5} -> using pins {2 .. 4} = B00011100
+// PORTB = {0 .. 5} -> using pins {0 .. 2} = B00000111
 
 /* port change interrupt to read PWM inputs from receiver */
 ISR( PCINT0_vect ) {
@@ -39,7 +39,7 @@ ISR( PCINT0_vect ) {
   
   // find changing pins
   for( uint8_t index = 0; index < 3; index += 1) {
-    uint8_t mask = B00000100 << index;  // Start at PCINT2
+    uint8_t mask = B00000001 << index;  // Start at PCINT0
     if( port_rise & mask ) {                
         initial_time[index] = current_time;
     } else if ( port_fall & mask ) {       
@@ -53,13 +53,13 @@ void setupISR() {
   // enable pin change interrupts
   GIMSK |= (1 << PCIE);     
   // set pins as PCINT
-  PCMSK |= (1 << PCINT2);   
-  PCMSK |= (1 << PCINT3);
-  PCMSK |= (1 << PCINT4);
+  PCMSK |= (1 << PCINT0);   
+  PCMSK |= (1 << PCINT1);
+  PCMSK |= (1 << PCINT2);
   // set as input
-  pinMode(PB2, INPUT_PULLUP);   
+  pinMode(PB1, INPUT_PULLUP);   
+  pinMode(PB2, INPUT_PULLUP); 
   pinMode(PB3, INPUT_PULLUP); 
-  pinMode(PB4, INPUT_PULLUP); 
 }
 
 //----- Input filter
@@ -87,10 +87,10 @@ float positive(float input) {
 //----- Servos
 
 void setupServos() {    
-    pinMode(PB0, OUTPUT);
-    pinMode(PB1, OUTPUT);
-    servo[0].attach(PB0);
-    servo[1].attach(PB1);
+    pinMode(PB3, OUTPUT);
+    pinMode(PB4, OUTPUT);
+    servo[0].attach(PB3);
+    servo[1].attach(PB4);
 }
 
 //---- Waveform
