@@ -42,7 +42,7 @@ ISR( PCINT0_vect ) {
   
   // find changing pins
   for( uint8_t index = 0; index < 4; index += 1) {
-    uint8_t mask = B00000010 << index;
+    uint8_t mask = B00000010 << index;  // Start at PCINT1   
     if( port_rise & mask ) {                
         initial_time[index] = current_time;
     } else if ( port_fall & mask ) {       
