@@ -1,8 +1,8 @@
 /*      CONSTANT     |    VALUE   |  UNIT  |   DESCRIPTION */
 /*=========================================================*/
 // 1.  Flapping waveform
-#define FREQ              2.8     // hz     // Wingbeat frequency [hz]. Use lowest frequency that achieves flight
-#define GAIN_WAVE         12.0              /* Triangle wave to square wave gain (truncation). 
+#define FREQ              3.1     // hz     // Wingbeat frequency [hz]. Use lowest frequency that achieves flight
+#define GAIN_WAVE         6.0              /* Triangle wave to square wave gain (truncation). 
                                                A larger gain makes the waveform become more square-like with more throttle */
 // 2. Control inputs [negate to reverse direction]
     // I. Base inputs:
@@ -18,14 +18,14 @@
 #define GAIN_ROLL_FM      0.0               // Roll: One wing falls faster than the other
 
 // 3. Servo trims 
-#define TRIM_LEFT         0       // us     // left  wing 
-#define TRIM_RIGHT        -60     // us     // right wing
+#define TRIM_LEFT         -80     // us     // left  wing 
+#define TRIM_RIGHT        50      // us     // right wing
 #define TRIM_TLEFT        0       // us     // left  tail
 #define TRIM_TRIGHT       50      // us     // right tail
 
 // 4. Pitching moment correction 
-#define PITCH_TRIM_X      200     // us     // Throttle PWM when trim reaches maximum value 
-#define PITCH_TRIM_Y      -350    // us     // Maximum pitch trim. Negate to reverse deflection
+#define PITCH_TRIM_X      250     // us     // Throttle PWM when trim reaches maximum value 
+#define PITCH_TRIM_Y      -35  v0    // us     // Maximum pitch trim. Negate to reverse deflection
 
 // 5. Low voltage cutoff [voltage divider]
 #define RESISTOR_1        67000   // ohm    // Resistor from ground -> middle 
