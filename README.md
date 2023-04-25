@@ -19,7 +19,7 @@ The _throttle channel (3)_ controls the amplitude of a fixed-frequency oscillati
 The _rudder channel (4)_ is used to assymetrically vary the amplitude of the wings. 
 
 ## Schematics
-__Nano__: While the program was written for an Arduino Nano, it should be compatible with similar boards. If you don't want to use tail servos, simply remove them from the circuit and disable their code using the _parameters.h_ file.
+__Nano__: While the program was written for an Arduino Nano, it should be compatible with similar boards. If you don't use tail servos, simply remove them from the circuit and disable their code using the _parameters.h_ file.
 
 <p align="center">
 <img src = "images/diagrams/nano/schematic-nano.png" width = "80%">
