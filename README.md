@@ -10,7 +10,7 @@ The _aileron (1) and elevator (2)_ channels are used to modify the motion of the
 <img src = "/images/plots/triangle-fmod.png" width = "70%">
 </p>
 
-The _throttle channel (3)_ controls the amplitude of a fixed-frequency oscillation. By the default, the waveform is a triangle-wave, but the throttle can also be used to trucante the wave so it looks more like a square wave. Using a square wave allows the servo to output more mechanical power, but the transition between strokes is abrupt. The truncated-wave eases this transition.
+The _throttle channel (3)_ controls the amplitude of a fixed-frequency oscillation. By the default, the waveform is a triangle-wave, but the throttle can also be used to trucante the wave so it looks more like a square wave. Using a square wave allows the servo to output more mechanical power, but the transition between strokes is very abrupt. The truncated-wave eases this transition while increasing power compared to a triangle wave.
 
 <p align="center">
 <img src = "/images/plots/triangle-truncation.png" width = "70%">
@@ -25,7 +25,7 @@ __Nano__: While the program was written for an Arduino Nano, it should be compat
 <img src = "images/diagrams/nano/schematic-nano.png" width = "80%">
 </p>
 
-__ATTiny__: As this microcontroller has less pins it does not support tail servos or a rudder channel. Rather, the assymetric amplitude can be mixed into the assymetric dihedral. 
+__Digispark ATTiny85__: As this microcontroller has less pins it does not support tail servos or a rudder channel. Rather, the assymetric amplitude can be mixed into the assymetric dihedral. 
 
 <p align="center">
 <img src = "images/diagrams/attiny/schematic-attiny.png" width = "80%">
