@@ -33,4 +33,4 @@ __ATTiny__: As this microcontroller has fewer pins, it does not support tail ser
 
 
 ## Example
-See: [explanation and operation of servo controller](https://youtu.be/T6NfZD_iuEs)  
+See: [explanation and operation of the servo controller](https://youtu.be/T6NfZD_iuEs)  
