@@ -1,4 +1,4 @@
-# Servo controller for ornithopter (robot bird) :bird:
+# Servo controller for an ornithopter :airplane: :bird:
 This arduino sketch is the servo controller for an RC ornithopter (Flapping MAV) powered and controlled by two servos. Each servo is connected to a wing and flapped independently. It also supports servos to control a tail. 
 
 ## How it works
