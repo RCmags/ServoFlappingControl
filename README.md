@@ -25,7 +25,7 @@ __Nano__: While the program was written for an Arduino Nano, it should be compat
 <img src = "images/diagrams/nano/schematic-nano.png" width = "80%">
 </p>
 
-__DigiSpark ATTiny85__: As this microcontroller has fewer pins, it does not support tail servos or a rudder channel. Instead, the assymetric amplitude can be mixed into the assymetric dihedral. 
+__DigiSpark ATTiny85__: As this microcontroller has fewer pins, it does not support tail servos or a rudder channel. Instead the assymetric amplitude can be mixed into the assymetric dihedral. 
 
 <p align="center">
 <img src = "images/diagrams/attiny/schematic-attiny.png" width = "80%">
