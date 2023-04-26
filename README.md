@@ -31,6 +31,8 @@ __DigiSpark ATTiny85__: As this microcontroller has fewer pins, it does not supp
 <img src = "images/diagrams/attiny/schematic-attiny.png" width = "80%">
 </p>
 
+## Dependencies
+The ATTiny program requires [ATTinyCore](https://github.com/SpenceKonde/ATTinyCore) to compile. 
 
 ## Example
 See: [explanation and operation of the servo controller](https://youtu.be/T6NfZD_iuEs)  
